@@ -23,6 +23,11 @@ PORT = 8000
 # Matches filenames like: config2_conc5.0mgL_rep3_20260916_142033_123456.png
 FILENAME_PATTERN = re.compile(r"config(\d+)_conc([\d.]+)mgL_rep(\d+)_")
 
+# The focus-check photo saved by calibrate_focus() in capture.py. This
+# doesn't match FILENAME_PATTERN (it's not part of the config/concentration
+# sweep), so it's shown separately at the top instead of being skipped.
+FOCUS_CHECK_FILENAME = "_focus_check.png"
+
 
 def get_local_ip():
     """Figure out this Pi's local network IP address, just to print it nicely."""
@@ -48,6 +53,9 @@ def group_photos_by_config_and_concentration():
     filenames = sorted(f for f in os.listdir(CAPTURES_DIR) if f.lower().endswith(".png"))
 
     for filename in filenames:
+        if filename == FOCUS_CHECK_FILENAME:
+            continue  # shown separately at the top of the page, not in the tree
+
         match = FILENAME_PATTERN.match(filename)
         if not match:
             continue  # skip files that don't match our naming pattern
@@ -72,6 +80,32 @@ def build_thumbnail_grid(filenames):
         </a>
         """
     return f'<div class="grid">{thumbs}</div>'
+
+
+def build_focus_check_section():
+    """
+    Builds a small section showing the most recent focus-check photo
+    (saved by capture.py's calibrate_focus() step), if one exists.
+    """
+    check_path = os.path.join(CAPTURES_DIR, FOCUS_CHECK_FILENAME)
+    if not os.path.exists(check_path):
+        return ""
+
+    return f"""
+    <details class="config" open>
+        <summary>Focus Check (latest)</summary>
+        <div class="config-body">
+            <div class="grid">
+                <a href="{CAPTURES_DIR}/{FOCUS_CHECK_FILENAME}" target="_blank">
+                    <div class="thumb">
+                        <img src="{CAPTURES_DIR}/{FOCUS_CHECK_FILENAME}">
+                        <p>{FOCUS_CHECK_FILENAME}</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </details>
+    """
 
 
 def build_gallery_html():
@@ -154,6 +188,7 @@ def build_gallery_html():
     </head>
     <body>
         <h2>HandyFluor Captures ({total_photos} photos total)</h2>
+        {build_focus_check_section()}
         {body}
     </body>
     </html>
